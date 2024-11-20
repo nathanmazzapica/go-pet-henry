@@ -4,6 +4,7 @@
 *.out
 *.o
 *.a
+go-pet-henry
 
 
 # Testing Cache
