@@ -1,0 +1,19 @@
+# Binaries
+*.so
+*.dylib
+*.out
+*.o
+*.a
+
+
+# Testing Cache
+*.test
+
+# Dependency Caches
+vendor/
+
+*.swp
+*.swo
+*.log
+
+.DS_Store
