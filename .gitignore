@@ -18,3 +18,5 @@ vendor/
 *.log
 
 .DS_Store
+.idea
+*.db

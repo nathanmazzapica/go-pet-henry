@@ -6,8 +6,10 @@ import (
 	"html/template"
 	"net/http"
 	"sync"
-
+	"database/sql"
 	"github.com/gorilla/websocket"
+	_ "github.com/mattn/go-sqlite3"
+	"time"
 )
 
 
@@ -29,6 +31,8 @@ func serveHome(w http.ResponseWriter, req *http.Request) {
 
 }
 
+var db *sql.DB
+
 var upgrader = websocket.Upgrader{
 	// Allows all origins (just for simplicity sake, this can and should be customized in production)
 	CheckOrigin: func(r *http.Request) bool {
@@ -39,16 +43,24 @@ var upgrader = websocket.Upgrader{
 type Client struct {
 	conn *websocket.Conn
 }
-// TODO: Replace `Message` struct with ClientMessage
+
 type ClientMessage struct {
 	UserID	string	`json:"userID"`
 	Action	string	`json:"action"`
-	Content string	`json:"content"` 
+	Content string	`json:"content,omitempty"` 
 }
 
 type Message struct {
-	Type string `json:"type"`
+	Action string `json:"action"`
 	Value int	`json:"value"`
+}
+
+type User struct {
+	Id				int			`field:"id"`
+	Pets			int			`field:"pets"`
+	UserID			string		`field:"user_id"`
+	DisplayName		string		`field:"display_name"`
+	CreatedAt		time.Time	`field:"created_at"`
 }
 
 
@@ -90,14 +102,63 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Error reading message:",err)
 			break
 		}
+	
+		rows, rerr := db.Query("SELECT * FROM users WHERE user_id = ?", "test-2")
 
-		if string(msg) == "pet" {
+		if rerr != nil {
+			fmt.Println("error getting rows:", rerr)
+		}
+
+		
+		for rows.Next() {
+			user := new(User)
+			rerr = rows.Scan(&user.Id, &user.Pets, &user.UserID, &user.DisplayName, &user.CreatedAt)
+
+			if rerr != nil {
+				fmt.Println("Error parsing data:", rerr)
+			}
+
+			fmt.Printf("%v | %v | %v\n", user.UserID, user.DisplayName, user.Pets)
+		}
+
+
+		var clientMsg ClientMessage
+
+		if err := json.Unmarshal(msg, &clientMsg); err != nil {
+			fmt.Println("Error decoding JSON:", err)
+			continue
+		}
+
+		switch clientMsg.Action {
+		case "pet":
 			mu.Lock()
 			counter++
-			fmt.Println("Counter incremented:", counter)
+			fmt.Printf("User %s pet henry! Total pets is now %d\n", clientMsg.UserID, counter)
+
+			row := db.QueryRow("SELECT pets FROM users WHERE user_id = ?", clientMsg.UserID)
+			
+			var pets int
+
+			err = row.Scan(&pets)
+			
+			fmt.Println(pets)
+
+			pets++
+
+			fmt.Println(pets)
+			_, err := db.Exec("UPDATE users SET pets = ? WHERE user_id = ?", pets, clientMsg.UserID)
+
+			if err != nil {
+				fmt.Println("error updating pets:", err)
+			}
+
 			mu.Unlock()
 
 			broadcast <- counter
+		case "connect":
+			fmt.Printf("New user connected!\n")
+		default:
+			fmt.Printf("Unknown action: %s from user %s\n", clientMsg.Action, clientMsg.UserID)
 		}
 
 
@@ -117,7 +178,7 @@ func handleBroadcasts() {
 		for client := range clients {
 
 			msg := Message{
-				Type: "counter",
+				Action: "counter",
 				Value: updatedCounter,
 			}
 
@@ -143,6 +204,34 @@ func handleBroadcasts() {
 
 func main() {
 	fmt.Println("Hello, Go!")
+
+	var dberr error
+
+	db, dberr = sql.Open("sqlite3", "henry.db")
+	defer db.Close()
+	if dberr != nil {
+		fmt.Println("Error opening database:", dberr)
+	}
+
+	// make sure to make the errors into one variable
+	rows, rerr := db.Query("SELECT * FROM users WHERE user_id = ?", "test-2")
+
+	if rerr != nil {
+		fmt.Println("error getting rows:", rerr)
+	}
+
+	
+	for rows.Next() {
+		user := new(User)
+		rerr = rows.Scan(&user.Id, &user.Pets, &user.UserID, &user.DisplayName, &user.CreatedAt)
+
+		if rerr != nil {
+			fmt.Println("Error parsing data:", rerr)
+		}
+
+		fmt.Printf("%v | %v", user.UserID, user.DisplayName)
+	}
+	
 
 
 	fs := http.FileServer(http.Dir("static"))
