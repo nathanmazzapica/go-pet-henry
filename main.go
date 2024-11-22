@@ -135,26 +135,18 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			counter++
 			fmt.Printf("User %s pet henry! Total pets is now %d\n", clientMsg.UserID, counter)
 
-			row := db.QueryRow("SELECT pets FROM users WHERE user_id = ?", clientMsg.UserID)
+			mu.Unlock()
+
+			broadcast <- counter
+
 			
-			var pets int
-
-			err = row.Scan(&pets)
-			
-			fmt.Println(pets)
-
-			pets++
-
-			fmt.Println(pets)
-			_, err := db.Exec("UPDATE users SET pets = ? WHERE user_id = ?", pets, clientMsg.UserID)
+			_, err := db.Exec("UPDATE users SET pets = pets + 1 WHERE user_id = ?", clientMsg.UserID)	
 
 			if err != nil {
 				fmt.Println("error updating pets:", err)
 			}
 
-			mu.Unlock()
 
-			broadcast <- counter
 		case "connect":
 			fmt.Printf("New user connected!\n")
 		default:
