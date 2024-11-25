@@ -9,26 +9,10 @@ import (
 	"database/sql"
 	"github.com/gorilla/websocket"
 	_ "github.com/mattn/go-sqlite3"
-	"time"
+	"github.com/google/uuid"
 )
 
 
-func serveHome(w http.ResponseWriter, req *http.Request) {
-	fmt.Println(req.URL)
-
-	data := struct {
-		Title string
-		User string
-	}{
-		Title: "Welcome Page",
-		User: "Nathan",
-	}
-
-	tmpl := template.Must(template.ParseFiles("templates/template.html"))
-
-	tmpl.Execute(w, data)
-
-}
 
 var db *sql.DB
 
@@ -54,13 +38,6 @@ type Message struct {
 	Value int		`json:"value"`
 }
 
-type User struct {
-	Id				int			`field:"id"`
-	Pets			int			`field:"pets"`
-	UserID			string		`field:"user_id"`
-	DisplayName		string		`field:"display_name"`
-	CreatedAt		time.Time	`field:"created_at"`
-}
 
 
 var (
@@ -69,6 +46,65 @@ var (
 	mu			sync.Mutex					// Mutex to lock/unlock
 	broadcast	= make(chan int)			// Channel to broadcast updates
 )
+
+
+func serveHome(w http.ResponseWriter, req *http.Request) {
+	user_id_cookie, err := req.Cookie("user_id")
+	var uid string
+	var user User
+	
+	// this if statement does way too much rn
+	if err != nil {
+		fmt.Println("error getting user id", err)
+		uid = uuid.New().String()
+		fmt.Println("Generated ID:", uid)
+
+		http.SetCookie(w, &http.Cookie{
+			Name:		"user_id",
+			Value:		uid,
+			SameSite: http.SameSiteLaxMode,
+		})
+		fmt.Println("Set-cookie header added for user id:", uid)
+		
+		// TODO: Export into createInSQL func
+
+		user = CreateUser(uid)
+
+		fmt.Println(user.DisplayName)
+
+		query := "INSERT INTO users (user_id, display_name) VALUES (?,?)"
+		_, err := db.Exec(query, user.UserID, user.DisplayName)
+
+		if err != nil {
+			fmt.Println("Error adding new user to db:",err)
+		}
+
+	} else {
+		// TODO: Export into retrieve from SQL func
+		uid = user_id_cookie.Value
+		fmt.Println("loaded uid:", uid)
+		result := db.QueryRow("SELECT display_name FROM users WHERE user_id = ?", uid)
+		
+		var displayName string
+
+		result.Scan(&displayName)
+		user.DisplayName = displayName
+
+	}
+
+	data := struct {
+		Title string
+		User string
+	}{
+		Title: "Pet Henry²",
+		User: user.DisplayName,
+	}
+
+	tmpl := template.Must(template.ParseFiles("templates/template.html"))
+
+	tmpl.Execute(w, data)
+
+}
 
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
@@ -101,14 +137,17 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Error reading message:",err)
 			break
 		}
+
+
+		
 	
-		rows, rerr := db.Query("SELECT * FROM users WHERE user_id = ?", "test-2")
+		rows, rerr := db.Query("SELECT * FROM users WHERE user_id = ?", "test-3")
 
 		if rerr != nil {
 			fmt.Println("error getting rows:", rerr)
 		}
 
-		
+		// Prints user retrieved from query on line 110
 		for rows.Next() {
 			user := new(User)
 			rerr = rows.Scan(&user.Id, &user.Pets, &user.UserID, &user.DisplayName, &user.CreatedAt)
