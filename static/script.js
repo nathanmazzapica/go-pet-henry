@@ -31,7 +31,7 @@ ws.onerror = (error) => {
 	console.error("WebSocket error:", error);
 };
 
-petBtn.addEventListener("click", (e) => {
+petBtn.addEventListener("click", () => {
 	console.log("pet");
 	petMessage = {
 		action: "pet",
@@ -41,7 +41,7 @@ petBtn.addEventListener("click", (e) => {
 	ws.send(JSON.stringify(petMessage));
 })
 
-sendChatBtn.addEventListener("click", (e) => {
+sendChatBtn.addEventListener("click", () => {
 
 	chatMessage = {
 		action:	"chat",

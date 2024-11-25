@@ -16,7 +16,6 @@ import (
 func serveHome(w http.ResponseWriter, req *http.Request) {
 	fmt.Println(req.URL)
 
-
 	data := struct {
 		Title string
 		User string
@@ -51,8 +50,8 @@ type ClientMessage struct {
 }
 
 type Message struct {
-	Action string `json:"action"`
-	Value int	`json:"value"`
+	Action string	`json:"action"`
+	Value int		`json:"value"`
 }
 
 type User struct {
@@ -198,33 +197,12 @@ func main() {
 	fmt.Println("Hello, Go!")
 
 	var dberr error
-
 	db, dberr = sql.Open("sqlite3", "henry.db")
 	defer db.Close()
+
 	if dberr != nil {
 		fmt.Println("Error opening database:", dberr)
 	}
-
-	// make sure to make the errors into one variable
-	rows, rerr := db.Query("SELECT * FROM users WHERE user_id = ?", "test-2")
-
-	if rerr != nil {
-		fmt.Println("error getting rows:", rerr)
-	}
-
-	
-	for rows.Next() {
-		user := new(User)
-		rerr = rows.Scan(&user.Id, &user.Pets, &user.UserID, &user.DisplayName, &user.CreatedAt)
-
-		if rerr != nil {
-			fmt.Println("Error parsing data:", rerr)
-		}
-
-		fmt.Printf("%v | %v", user.UserID, user.DisplayName)
-	}
-	
-
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
