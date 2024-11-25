@@ -16,8 +16,13 @@ type User struct {
 }
 
 func generateRandomName() string {
-	adjectives := []string{"happy","sad","mad"}
-	nouns := []string{"Cat","Dog","Henry"}
+	adjectives := []string{"big", "long", "small", "golden", "yellow", "black",
+							"red", "short", "cunning", "silly","radical","sluggish",
+							"speedy","humorous","shy","scared","brave","intelligent","stupid"}
+
+	nouns := []string{"Dog","Watermelon","Crusader","Lancer","Envisage","Frog",
+					"Beetle","Cellphone","Python","Lizard","Butterfly","Dragon",
+					"Automobile","Cow","Henry","Levi","Array","Buzzer","Balloon"}
 
 	adj_i := rand.Intn(len(adjectives))
 	noun_i := rand.Intn(len(nouns))
