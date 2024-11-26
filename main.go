@@ -137,29 +137,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Error reading message:",err)
 			break
 		}
-
-
-		
 	
-		rows, rerr := db.Query("SELECT * FROM users WHERE user_id = ?", "test-3")
-
-		if rerr != nil {
-			fmt.Println("error getting rows:", rerr)
-		}
-
-		// Prints user retrieved from query on line 110
-		for rows.Next() {
-			user := new(User)
-			rerr = rows.Scan(&user.Id, &user.Pets, &user.UserID, &user.DisplayName, &user.CreatedAt)
-
-			if rerr != nil {
-				fmt.Println("Error parsing data:", rerr)
-			}
-
-			fmt.Printf("%v | %v | %v\n", user.UserID, user.DisplayName, user.Pets)
-		}
-
-
 		var clientMsg ClientMessage
 
 		if err := json.Unmarshal(msg, &clientMsg); err != nil {
