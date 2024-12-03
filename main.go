@@ -39,7 +39,6 @@ type Message struct {
 }
 
 
-
 var (
 	clients		= make(map[*Client]bool)	// Track connected clients
 	counter		int							// Shared counter
@@ -47,6 +46,10 @@ var (
 	broadcast	= make(chan int)			// Channel to broadcast updates
 )
 
+
+func changeDisplayName(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("pong")
+}
 
 func serveHome(w http.ResponseWriter, req *http.Request) {
 	user_id_cookie, err := req.Cookie("user_id")
@@ -90,14 +93,26 @@ func serveHome(w http.ResponseWriter, req *http.Request) {
 		result.Scan(&displayName)
 		user.DisplayName = displayName
 
+		var pets int
+		result = db.QueryRow("SELECT pets FROM users WHERE user_id = ?", uid)
+
+		result.Scan(&pets)
+		user.Pets = pets
+
+
+
 	}
 
 	data := struct {
 		Title string
 		User string
+		UserPets int
+		TotalPets int
 	}{
 		Title: "Pet Henry²",
 		User: user.DisplayName,
+		UserPets: user.Pets,
+		TotalPets: counter,
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/template.html"))
@@ -106,8 +121,27 @@ func serveHome(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func validateUserFromCookies(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("user_id")
+
+	if err != nil {
+		return "", err
+	}
+
+	userID := cookie.Value
+	return userID, nil
+}
+
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+
+	userID, err := validateUserFromCookies(r)
+
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
@@ -131,6 +165,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Client connected")
 
 	for {
+		fmt.Println(userID)
 		_, msg, err := conn.ReadMessage()
 
 		if err != nil {
@@ -156,7 +191,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			broadcast <- counter
 
 			
-			_, err := db.Exec("UPDATE users SET pets = pets + 1 WHERE user_id = ?", clientMsg.UserID)	
+			_, err := db.Exec("UPDATE users SET pets = pets + 1 WHERE user_id = ?", userID)	
 
 			if err != nil {
 				fmt.Println("error updating pets:", err)
@@ -220,6 +255,10 @@ func main() {
 	if dberr != nil {
 		fmt.Println("Error opening database:", dberr)
 	}
+
+	result := db.QueryRow("SELECT SUM(pets) FROM users")
+
+	result.Scan(&counter)
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))

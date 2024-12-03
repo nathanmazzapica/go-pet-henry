@@ -11,11 +11,15 @@
     </header>
     <main>
         <p>Welcome, {{ .User }}! We're glad to have you here.</p>
-		<h2 id='pet-counter'>Henry has been pet 0 times!</h2>
+		<h2 id='pet-counter'>Henry has been pet {{ .TotalPets }} times!</h2>
+		<p id='personal-counter'>You have pet him {{ .UserPets }} times!</p>
 		<button id='pet-henry-btn'>Pet Henry</button>
 		<br>
 		<input type='text' id='chat-content'>
 		<button id='send-chat-btn'>Send chat</button>
+		<script>
+			let personalNumber = {{ .UserPets }}
+		</script>
 		<script src="../static/script.js"></script>
     </main>
     <footer>

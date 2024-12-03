@@ -1,8 +1,10 @@
 petBtn = document.getElementById('pet-henry-btn')
 sendChatBtn = document.getElementById('send-chat-btn')
 chatContent = document.getElementById('chat-content')
+personalCounter = document.getElementById('personal-counter')
 
 const ws = new WebSocket("ws://localhost:8080/ws");
+console.log(personalNumber)
 
 ws.onopen = () => {
 	console.log("Connected to the server");
@@ -20,6 +22,8 @@ ws.onmessage = (event) => {
 	if (data.action == "counter") {
 		console.log(`New pet count: ${data.value}`)
 		document.getElementById('pet-counter').textContent = `Henry has been pet ${data.value} times!`
+	} else if (data.action == "init") {
+		console.log(`Personal pet count: ${data.value}`)
 	}
 };
 
@@ -38,7 +42,13 @@ petBtn.addEventListener("click", () => {
 		userID: "test-1",
 	}
 
+	personalNumber++
+	console.log(personalNumber)
+	personalCounter.textContent = `You have pet him ${personalNumber} times!`
+
+
 	ws.send(JSON.stringify(petMessage));
+
 })
 
 sendChatBtn.addEventListener("click", () => {
