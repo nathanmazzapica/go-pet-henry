@@ -10,15 +10,17 @@
         <h1>{{ .Title }}</h1>
     </header>
     <main>
-        <p>Welcome, {{ .User }}! We're glad to have you here.</p>
+        <p id ='greeting'>Welcome, {{ .User }}! We're glad to have you here.</p>
 		<h2 id='pet-counter'>Henry has been pet {{ .TotalPets }} times!</h2>
 		<p id='personal-counter'>You have pet him {{ .UserPets }} times!</p>
 		<button id='pet-henry-btn'>Pet Henry</button>
 		<br>
 		<input type='text' id='chat-content'>
 		<button id='send-chat-btn'>Send chat</button>
+		<button id='change-name-btn'>Change Display Name</button>
 		<script>
 			let personalNumber = {{ .UserPets }}
+			let myDisplayName = {{ .User }}
 		</script>
 		<script src="../static/script.js"></script>
     </main>

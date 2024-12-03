@@ -1,15 +1,19 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
+	"strings"
 	"sync"
-	"database/sql"
+
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/google/uuid"
 )
 
 
@@ -33,6 +37,15 @@ type ClientMessage struct {
 	Content string	`json:"content,omitempty"` 
 }
 
+type ChangeDisplayNameRequest struct {
+	DisplayName string `json:"displayName"`
+}
+
+type ChangeDisplayNameResponse struct{
+	Success bool	`json:"success"`
+	Message string	`json:"message"`
+}
+
 type Message struct {
 	Action string	`json:"action"`
 	Value int		`json:"value"`
@@ -47,8 +60,74 @@ var (
 )
 
 
+func validateName(displyName string) error {
+	if len(displyName) < 4 || len(displyName) > 25 {
+		return errors.New("Name must be between 4 and 25 characters.")
+	}
+
+	if strings.ContainsRune(displyName, ' ') {
+		return errors.New("Name cannot contain spaces!")
+	}
+
+	if strings.ContainsAny(displyName, "\"\b\n\r\t%!@#$%^&*()-+=;:/.,<>`~_'") {
+		return errors.New("Name may only contain letters and numbers")
+	}
+
+	return nil
+}
+
 func changeDisplayName(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("pong")
+
+	if req.Method != http.MethodPost {
+		http.Error(w, "Method not allowed!", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(req.Body)
+
+	if err != nil {
+		http.Error(w, "Unabled to read request body", http.StatusBadRequest)
+	}
+	
+	var changeRequest ChangeDisplayNameRequest
+	err = json.Unmarshal(body, &changeRequest)
+
+	if err != nil {
+		fmt.Println("Error parsing display name change request", err)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+	}
+
+	fmt.Println(body)
+
+	responseSuccess := true
+	responseMessage := "DisplayName changed to " + changeRequest.DisplayName
+
+
+	err = validateName(changeRequest.DisplayName)
+	if err != nil {
+		fmt.Println("Invalid name:", err)
+		responseSuccess = false
+		responseMessage = err.Error()
+	}
+
+	user_id_cookie, err := req.Cookie("user_id")
+
+	user_id_string := user_id_cookie.Value
+
+	result, err := db.Exec("UPDATE users SET display_name = ? WHERE user_id = ?",
+							changeRequest.DisplayName, user_id_string)
+	
+	affectedRows, _ := result.RowsAffected()
+	fmt.Println("Affected", affectedRows, "rows")
+	
+
+	response := ChangeDisplayNameResponse{
+		Success: responseSuccess,
+		Message: responseMessage,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func serveHome(w http.ResponseWriter, req *http.Request) {
@@ -267,6 +346,8 @@ func main() {
 	http.HandleFunc("/",serveHome)
 	
 	http.HandleFunc("/ws", handleConnections)
+
+	http.HandleFunc("/cd", changeDisplayName)
 
 	go handleBroadcasts()
 

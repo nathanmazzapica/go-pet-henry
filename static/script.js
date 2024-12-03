@@ -1,7 +1,8 @@
-petBtn = document.getElementById('pet-henry-btn')
-sendChatBtn = document.getElementById('send-chat-btn')
-chatContent = document.getElementById('chat-content')
-personalCounter = document.getElementById('personal-counter')
+const petBtn = document.getElementById('pet-henry-btn')
+const sendChatBtn = document.getElementById('send-chat-btn')
+const changeDisplayNameBtn = document.getElementById('change-name-btn')
+const chatContent = document.getElementById('chat-content')
+const personalCounter = document.getElementById('personal-counter')
 
 const ws = new WebSocket("ws://localhost:8080/ws");
 console.log(personalNumber)
@@ -63,3 +64,24 @@ sendChatBtn.addEventListener("click", () => {
 	chatContent.value = ""
 })
 
+changeDisplayNameBtn.addEventListener("click", changeDisplayName)
+
+function changeDisplayName() {
+
+	let name = prompt("Enter your new display name: ", `${myDisplayName}`)
+
+	fetch('/cd', {
+		method: 'POST',
+		body: JSON.stringify({ displayName: name })
+	})
+	.then(response => response.json())
+	.then(data => {
+		console.log(data)
+		if (!data.success) { alert("Invalid name!") }
+		else { myDisplayName = name; updateDisplayName() }
+	})
+}
+
+function updateDisplayName() {
+	document.getElementById('greeting').textContent = `Welcome, ${myDisplayName}! We're glad to have you here.`
+}
